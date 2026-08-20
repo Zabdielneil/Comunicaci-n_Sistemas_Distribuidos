@@ -4,8 +4,8 @@ API idéntica desplegada en dos servidores Linux con distinto kernel/distribuci�
 
 | Servidor | SO | IP | Puerto |
 |---|---|---|---|
-| Servidor 1 | Ubuntu 24.04 LTS | 192.168.56.10 | 8000 |
-| Servidor 2 | Rocky Linux 9 | 192.168.56.11 | 8000 |
+| Servidor 1 | Ubuntu 24.04 LTS | 192.168.56.128 | 8000 |
+| Servidor 2 | Rocky Linux 9 | 192.168.56.129 | 8000 |
 
 ## 0. Red virtual (VirtualBox) — una sola vez, en el host
 
@@ -23,7 +23,7 @@ network:
   version: 2
   ethernets:
     enp0s8:
-      addresses: [192.168.56.10/24]
+      addresses: [192.168.56.128/24]
 EOF
 sudo netplan apply
 ```
@@ -31,14 +31,14 @@ sudo netplan apply
 **Servidor 2 (Rocky Linux 9) — interfaz normalmente `enp0s8`:**
 ```bash
 nmcli con show   # identificar el nombre de conexión del segundo adaptador
-sudo nmcli con mod enp0s8 ipv4.addresses 192.168.56.11/24 ipv4.method manual
+sudo nmcli con mod enp0s8 ipv4.addresses 192.168.56.129/24 ipv4.method manual
 sudo nmcli con up enp0s8
 ```
 
 Verificar conectividad cruzada:
 ```bash
-ping -c3 192.168.56.11    # desde Servidor 1
-ping -c3 192.168.56.10    # desde Servidor 2
+ping -c3 192.168.56.129    # desde Servidor 1
+ping -c3 192.168.56.128    # desde Servidor 2
 ```
 
 ## 2. Instalar Docker
@@ -110,13 +110,13 @@ curl http://localhost:8000/estado
 
 **Verificar comunicación bidireccional (desde Servidor 1):**
 ```bash
-curl http://192.168.56.11:8000/            # alcanza al Servidor 2
-curl http://192.168.56.10:8000/estado | jq  # "servidor_par.disponible" debe ser true
+curl http://192.168.56.128:8000/            # alcanza al Servidor 2
+curl http://192.168.56.129:8000/estado | jq  # "servidor_par.disponible" debe ser true
 ```
 
 **Registrar un dato en el Servidor 1 y confirmarlo en el Servidor 2:**
 ```bash
-curl -X POST http://192.168.56.10:8000/registrar \
+curl -X POST http://192.168.56.128:8000/registrar \
   -H "Content-Type: application/json" \
   -d '{"dato": "Prueba desde servidor 1"}'
 
@@ -125,7 +125,7 @@ curl http://192.168.56.11:8000/consultar    # el registro debe aparecer sincroni
 
 **Registrar un dato en el Servidor 2 y confirmarlo en el Servidor 1:**
 ```bash
-curl -X POST http://192.168.56.11:8000/registrar \
+curl -X POST http://192.168.56.129:8000/registrar \
   -H "Content-Type: application/json" \
   -d '{"dato": "Prueba desde servidor 2"}'
 
@@ -136,8 +136,8 @@ curl http://192.168.56.10:8000/consultar
 
 Con la red solo-anfitrión (`vboxnet0` / `192.168.56.0/24`), el host de VirtualBox puede acceder directamente sin port-forwarding:
 ```
-http://192.168.56.10:8000/
-http://192.168.56.11:8000/
+http://192.168.56.128:8000/
+http://192.168.56.129:8000/
 ```
 Basta con abrir esas URLs en el navegador del host o consultarlas con Postman.
 
