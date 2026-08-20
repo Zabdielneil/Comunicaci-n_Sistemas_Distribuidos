@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: db_distribuido
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: distribuido
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: appuser
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - distnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d distribuido"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    container_name: api_distribuido
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://appuser:appuser@db:5432/distribuido
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - distnet
+
+networks:
+  distnet:
+    driver: bridge
+
+volumes:
+  pgdata:
